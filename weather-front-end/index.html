@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>weatherApp</title>
+        <link rel="stylesheet" href="style.css">
+    </head>
+
+    <body>
+
+        <div id="container">
+            <h1>What's the weather like ?</h1>
+
+            <div id="weather-section">
+                <button onclick="getForecast()">What is my current location ? </button>
+
+                <p id="lat"></p>
+                <p id="long"> </p>
+                <p><span id="temperature"></span></p>
+                <p><span id="description"></span></p>
+                <p id="message"></p>
+            </div>
+        </div>
+
+        <div id="comment-section">
+            <h2>Comment below and tell us how does it makes you feel</h2>
+
+            <textarea id="comment" placeholder="write your comment">cahjscas </textarea></br>
+            <button onclick="addComment()"> Submit your comment </button>
+        
+            <ul id="comments-list"></ul>
+        </div>
+
+
+
+
+        <script src="script.js"></script>
+    </body>
+
+</html>
