@@ -6,15 +6,22 @@ const app = express(); // create an Express application
 const port = 3000; // Define the port number for the server
 const JWT_SECRET = 'My$ecretK3yForJWT!987';
 const mongoose = require('mongoose');
-
 const mongUrl = 'mongodb://localhost:27017/weatherApp'; // for my local MongoDB
 
-mongoose.connect('mongodb://localhost:27017/weatherApp', {
-    useNewUrlParser: true,    // Uses the new connection string parser
-    useUnifiedTopology: true  // Uses the new connection management engine
-})
+
+mongoose.connect(mongUrl)
     .then(() => console.log("Connected to MongoDB"))
     .catch(err => console.error("MongoDB connection error:", err));
+
+// Define a schema for users
+const userSchema = new mongoose.Schema({
+    username: {type: String, required: true, unique: true},
+    password: {type: String, required: true},
+    date: {type: Date, default: Date.now}
+});
+
+// Create a User model based on the schema
+const User = mongoose.model('User', userSchema);
 
 // Define a schema for comments
 const commentSchema = new mongoose.Schema({
@@ -24,15 +31,8 @@ const commentSchema = new mongoose.Schema({
 });
 
 // Create a Comment model based on the schema
-const comment = mongoose.model('Comment', commentSchema);
+const Comment = mongoose.model('Comment', commentSchema);
 
-
-const users = [
-    {
-        username: 'sara',
-        password: '$2a$10$GUtCS10xYdj5e0TOH4LZj.AS1gZtolp1GWfdpLeQj1MtJ2c7z0MSC'  // Ce champ ne sera pas utilisé pour l'instant
-    }
-];
 
 // Middleware to parse the request bodies
 app.use(express.json());
@@ -71,25 +71,38 @@ function authenticateJWT(req, res, next) {
 app.get('/api/protected', authenticateJWT, (req, res) => {
     res.json('it worked');
 
-})
+});
 
 // Login route 
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
 
-    // Cherche si l'utilisateur existe
-    let user = users.find(u => u.username === username);
-    // console.log(user);
+    try {
+          // Cherche si l'utilisateur existe
+    let user = await User.findOne({username: username})
+        .then(user => {
+            if(user){
+                console.log('User found: ', user);
+            }else{
+                console.log('User not found');
+            }
+        })
+        .catch(err => {
+            console.error('Error fetching user', err);
+        })
+        
+        
 
     if (!user) {
         // Si l'utilisateur n'existe pas, créer un nouvel utilisateur avec un mot de passe haché
         const hashedPwd = await bcrypt.hash(password, 10);
-        const newUser = {
+
+        const newUser = new User({
             username: username,
             password: hashedPwd
-        };
+        });
 
-        users.push(newUser);
+        await newUser.save();
         user = newUser;
     }
 
@@ -102,8 +115,11 @@ app.post('/api/login', async (req, res) => {
     const token = jwt.sign({ username: user.username }, JWT_SECRET, { expiresIn: '1h' });
     res.json({ token })
 
-})
-
+    } catch (error) {
+        console.log(error);
+        res.status(500).send('Internal server error');
+    }
+});
 
 // Start a server on the port 3000
 app.listen(port, () => {
