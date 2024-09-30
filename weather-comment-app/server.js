@@ -3,8 +3,29 @@ const express = require('express'); // import the Express framework
 const bcrypt = require('bcryptjs'); // import bcrypt
 const jwt = require('jsonwebtoken');
 const app = express(); // create an Express application
-const port = 3000 // Define the port number for the server
+const port = 3000; // Define the port number for the server
 const JWT_SECRET = 'My$ecretK3yForJWT!987';
+const mongoose = require('mongoose');
+
+const mongUrl = 'mongodb://localhost:27017/weatherApp'; // for my local MongoDB
+
+mongoose.connect('mongodb://localhost:27017/weatherApp', {
+    useNewUrlParser: true,    // Uses the new connection string parser
+    useUnifiedTopology: true  // Uses the new connection management engine
+})
+    .then(() => console.log("Connected to MongoDB"))
+    .catch(err => console.error("MongoDB connection error:", err));
+
+// Define a schema for comments
+const commentSchema = new mongoose.Schema({
+    username: { type: String, required: true },
+    comment: { type: String, required: true },
+    date: { type: Date, default: Date.now }
+});
+
+// Create a Comment model based on the schema
+const comment = mongoose.model('Comment', commentSchema);
+
 
 const users = [
     {
@@ -40,13 +61,14 @@ function authenticateJWT(req, res, next) {
         }
 
         // Storing the decoded user information (from the token) in req.user
+        console.log(user);
         req.user = user;
         next();
     })
 
 }
 
-app.get('/kiki', authenticateJWT, (req, res) => {
+app.get('/api/protected', authenticateJWT, (req, res) => {
     res.json('it worked');
 
 })
