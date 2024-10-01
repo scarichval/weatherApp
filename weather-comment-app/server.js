@@ -8,40 +8,8 @@ const JWT_SECRET = 'My$ecretK3yForJWT!987';
 const mongoose = require('mongoose');
 const mongUrl = 'mongodb://localhost:27017/weatherApp'; // for my local MongoDB
 
-
-mongoose.connect(mongUrl)
-    .then(() => console.log("Connected to MongoDB"))
-    .catch(err => console.error("MongoDB connection error:", err));
-
-// Define a schema for users
-const userSchema = new mongoose.Schema({
-    username: {type: String, required: true, unique: true},
-    password: {type: String, required: true},
-    date: {type: Date, default: Date.now}
-});
-
-// Create a User model based on the schema
-const User = mongoose.model('User', userSchema);
-
-// Define a schema for comments
-const commentSchema = new mongoose.Schema({
-    username: { type: String, required: true },
-    comment: { type: String, required: true },
-    date: { type: Date, default: Date.now }
-});
-
-// Create a Comment model based on the schema
-const Comment = mongoose.model('Comment', commentSchema);
-
-
 // Middleware to parse the request bodies
 app.use(express.json());
-
-// Basic route - Home page
-app.get('/', async (req, res) => {
-    res.send('Hello world !'); // Send a response when someone visits the root URL
-});
-
 
 // Middleware pour vérifier le JWT
 function authenticateJWT(req, res, next) {
@@ -61,13 +29,72 @@ function authenticateJWT(req, res, next) {
         }
 
         // Storing the decoded user information (from the token) in req.user
-        console.log(user);
+        // console.log(user);
         req.user = user;
         next();
     })
-
 }
 
+// Connexion mongooseDB
+mongoose.connect(mongUrl)
+    .then(() => console.log("Connected to MongoDB"))
+    .catch(err => console.error("MongoDB connection error:", err));
+
+// Define a schema for users
+const userSchema = new mongoose.Schema({
+    username: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    date: { type: Date, default: Date.now }
+});
+
+// Create a User model based on the schema
+const User = mongoose.model('User', userSchema);
+
+// Define a schema for comments
+const commentSchema = new mongoose.Schema({
+    username: { type: String, required: true },
+    comment: { type: String, required: true },
+    date: { type: Date, default: Date.now }
+});
+
+// Create a Comment model based on the schema
+const Comment = mongoose.model('Comment', commentSchema);
+
+
+// Add comment route
+app.post('/api/comments',authenticateJWT, async (req, res) => {
+    const { username, comment } = req.body;
+
+    try {
+        const newComment = new Comment({
+            username: username,
+            comment: comment
+        });
+
+        await newComment.save();
+        res.status(201).json({ message: 'Comment added succesfully' });
+
+    } catch (err) {
+        res.status(500).json({ error: 'Error adding comment', details: err });
+    }
+});
+
+
+// retrieve comments route
+app.get('/api/comments', authenticateJWT, (req, res) => {
+    const comments = Comment.find()
+        .then(comments => res.json({comments: comments}))
+        .catch(err =>  res.json({error: err}));
+})
+
+
+// Basic route - Home page
+app.get('/', async (req, res) => {
+    res.send('Hello world !'); // Send a response when someone visits the root URL
+});
+
+
+// route to test the authenticateJWT
 app.get('/api/protected', authenticateJWT, (req, res) => {
     res.json('it worked');
 
@@ -78,48 +105,37 @@ app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
 
     try {
-          // Cherche si l'utilisateur existe
-    let user = await User.findOne({username: username})
-        .then(user => {
-            if(user){
-                console.log('User found: ', user);
-            }else{
-                console.log('User not found');
-            }
-        })
-        .catch(err => {
-            console.error('Error fetching user', err);
-        })
+        // Cherche si l'utilisateur existe
+        let user = await User.findOne({ username: username })
         
-        
+        if (!user) {
+            // Si l'utilisateur n'existe pas, créer un nouvel utilisateur avec un mot de passe haché
+            const hashedPwd = await bcrypt.hash(password, 10);
+            const newUser = new User({
+                username: username,
+                password: hashedPwd
+            });
+            await newUser.save();
+            user = newUser;
+        }
 
-    if (!user) {
-        // Si l'utilisateur n'existe pas, créer un nouvel utilisateur avec un mot de passe haché
-        const hashedPwd = await bcrypt.hash(password, 10);
+        const validPassword = await bcrypt.compare(password, user.password);
+        if (!validPassword) {
+            return res.status(400).send('Invalid credentials');
+        }
 
-        const newUser = new User({
-            username: username,
-            password: hashedPwd
-        });
-
-        await newUser.save();
-        user = newUser;
-    }
-
-    const validPassword = await bcrypt.compare(password, user.password);
-    if (!validPassword) {
-        return res.status(400).send('Invalid credentials');
-    }
-
-    // generer un token pour l'utilisateur
-    const token = jwt.sign({ username: user.username }, JWT_SECRET, { expiresIn: '1h' });
-    res.json({ token })
+        // generer un token pour l'utilisateur
+        const token = jwt.sign({ username: user.username }, JWT_SECRET, { expiresIn: '1h' });
+        res.json({ token })
 
     } catch (error) {
-        console.log(error);
+        // console.log(error);
         res.status(500).send('Internal server error');
     }
 });
+
+
+
 
 // Start a server on the port 3000
 app.listen(port, () => {
