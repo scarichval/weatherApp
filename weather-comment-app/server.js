@@ -80,12 +80,24 @@ app.post('/api/comments',authenticateJWT, async (req, res) => {
 });
 
 
-// retrieve comments route
-app.get('/api/comments', authenticateJWT, (req, res) => {
-    const comments = Comment.find()
-        .then(comments => res.json({comments: comments}))
-        .catch(err =>  res.json({error: err}));
-})
+// retrieve comments route using then/catch function
+// app.get('/api/comments', authenticateJWT, (req, res) => {
+//     const comments = Comment.find()
+//         .then(comments => res.json({comments: comments}))
+//         .catch(err =>  res.json({error: err}));
+// });
+
+// retrieve comments route using async/await with try/catch
+app.get('/api/comments', async (req, res) => {
+  try {
+    const comments = await Comment.find();
+    res.json({comments: comments});
+  } catch (err) {
+    res.status(500).json({error: 'Error retrieving the comments', details: err});
+  }
+
+    
+});
 
 
 // Basic route - Home page
