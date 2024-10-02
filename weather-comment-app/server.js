@@ -62,7 +62,7 @@ const Comment = mongoose.model('Comment', commentSchema);
 
 
 // Add comment route
-app.post('/api/comments',authenticateJWT, async (req, res) => {
+app.post('/api/comments', authenticateJWT, async (req, res) => {
     const { username, comment } = req.body;
 
     try {
@@ -89,14 +89,45 @@ app.post('/api/comments',authenticateJWT, async (req, res) => {
 
 // retrieve comments route using async/await with try/catch
 app.get('/api/comments', async (req, res) => {
-  try {
-    const comments = await Comment.find();
-    res.json({comments: comments});
-  } catch (err) {
-    res.status(500).json({error: 'Error retrieving the comments', details: err});
-  }
+    try {
+        const comments = await Comment.find();
+        res.json({ comments: comments });
+    } catch (err) {
+        res.status(500).json({ error: 'Error retrieving the comments', details: err });
+    }
 
-    
+});
+
+// route to update the comment
+app.put('/api/comments/:id', async (req, res) => {
+    const commentId = req.params.id;
+    const { comment } = req.body;
+
+    try {
+        const updatedComment = await Comment.findByIdAndUpdate(commentId, { comment }, { new: true });
+        if (!updatedComment) {
+            res.status(404).json({ message: 'comment not found' });
+        }
+        res.json({ message: 'comment added succesfully', updatedComment });
+    } catch (err) {
+        res.status(500).json({ error: 'Error updating the comment', details: err });
+    }
+
+});
+
+// route to delete the comment
+app.delete('/api/comments/:id', async(req, res) => {
+    commentId = req.params.id;
+
+    try {
+        const deletedComment = await Comment.findByIdAndDelete(commentId);
+        if (!deletedComment) {
+            res.status(404).json({ message: 'comment to delete not found' })
+        }
+        res.json({messge: 'comment has been deleted successfully', deletedComment})
+    } catch (err) {
+        res.status(500).json({error: 'Error deleting the comment', err});
+    }
 });
 
 
@@ -119,7 +150,7 @@ app.post('/api/login', async (req, res) => {
     try {
         // Cherche si l'utilisateur existe
         let user = await User.findOne({ username: username })
-        
+
         if (!user) {
             // Si l'utilisateur n'existe pas, créer un nouvel utilisateur avec un mot de passe haché
             const hashedPwd = await bcrypt.hash(password, 10);
