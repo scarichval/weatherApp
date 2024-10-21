@@ -6,10 +6,22 @@ const app = express(); // create an Express application
 const port = 3000; // Define the port number for the server
 const JWT_SECRET = 'My$ecretK3yForJWT!987';
 const mongoose = require('mongoose');
-const mongUrl = 'mongodb://localhost:27017/weatherApp'; // for my local MongoDB
+const mongUrl = 'mongodb://localhost:27017/weatherApp'; // for my local MongoDB - mongo connection URl
+const fetch = require('node-fetch'); // Import node-fetch to make HTTP requests to external APIs
+const apiKey = '7c26090466da8d2c994c88106a7f9ad9'; // API key for OpenWeatherMap
+const cors = require('cors');
+
+// Configure CORS options (replace 'http://localhost:5500' with your frontend's URL)
+const corsOptions = {
+    origin: 'http://127.0.0.1:5500',  
+    optionsSuccessStatus: 200
+};
 
 // Middleware to parse the request bodies
 app.use(express.json());
+
+// Enable CORS from all routes
+app.use(cors(corsOptions));
 
 // Middleware pour vérifier le JWT
 function authenticateJWT(req, res, next) {
@@ -34,6 +46,7 @@ function authenticateJWT(req, res, next) {
         next();
     })
 }
+
 
 // Connexion mongooseDB
 mongoose.connect(mongUrl)
@@ -60,6 +73,28 @@ const commentSchema = new mongoose.Schema({
 // Create a Comment model based on the schema
 const Comment = mongoose.model('Comment', commentSchema);
 
+// route to handle weather data requests from the frontend
+app.get('/api/weather', async (req, res) => {
+    const { lat, lon } = req.query;
+    
+    if(!lat || !lon){
+        return res.status(400).json({ message: "Latitude and longitude are required" });
+    }
+
+    try {
+        const weatherResponse = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}`);
+        const weatherData = await weatherResponse.json();
+
+        if(!weatherResponse.ok){
+            return res.status(weatherResponse.status).json({ message: weatherData});
+        }
+
+        return res.json(weatherData);
+
+    } catch (error) {  
+        return res.status(500).json({ message: "Error fetching weather data" });
+    }
+})
 
 // Add comment route
 app.post('/api/comments', authenticateJWT, async (req, res) => {
@@ -117,7 +152,7 @@ app.put('/api/comments/:id', async (req, res) => {
 
 // route to delete the comment
 app.delete('/api/comments/:id', async(req, res) => {
-    commentId = req.params.id;
+    commentId = req.params.id;n
 
     try {
         const deletedComment = await Comment.findByIdAndDelete(commentId);
