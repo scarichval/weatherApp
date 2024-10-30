@@ -10,6 +10,39 @@ const serverUrl = "http://localhost:3000";
 // When the page finishes loading, run the loadDOM function
 document.addEventListener('DOMContentLoaded', loadDOM());
 
+function login() {
+    const username = document.getElementById("username").value;
+    const password = document.getElementById("password").value;
+
+    fetch(`${serverUrl}/api/login`, {
+        method: "POST",
+        headers: {
+            "Content-type": "application/json"
+        },
+        body: JSON.stringify({ username, password })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error("Server-side error");
+        }
+        return response.json();
+    })
+    .then(data => {
+        localStorage.setItem("authToken", data.token);
+
+        document.getElementById("login-message").textContent = "Login successful!";
+        document.getElementById("login-section").style.display = "none";
+        document.getElementById("comment-section").style.display = "block";
+
+        // Fetch and display comments
+        displayComment();
+    })
+    .catch(error => {
+        console.log("Error:", error);
+        document.getElementById("login-message").textContent = "login failed!";
+    });
+}
+
 // Function to start the process of fetching weather data
 function getForecast() {
     getLocation(); // First, get the user's location
@@ -21,7 +54,6 @@ function getLocation() {
         // If geolocation is supported, get the current position and pass it to showLocationData
         navigator.geolocation.getCurrentPosition(showLocationData);
     } else {
-        // If geolocation is not supported, show an error message
         alert('Geolocation is not supported by this browser.');
         message.innerHTML = "Geolocation is not supported by this browser.";
     }
@@ -29,38 +61,29 @@ function getLocation() {
 
 // Function to handle the position data returned by the geolocation API
 function showLocationData(position) {
-    // Get latitude and longitude from the position object and round them to 5 decimal places
     const latitude = position.coords.latitude.toFixed(5);
     const longitude = position.coords.longitude.toFixed(5);
 
-    // Display latitude and longitude in the HTML
     lat.innerHTML = `Lat: ${latitude}`;
     long.innerHTML = `Long: ${longitude}`;
 
-    // Call function to fetch the current temperature using the coordinates
     getCurrentTemperature(latitude, longitude);
 }
 
 // Function to fetch weather data from the OpenWeather API using latitude and longitude
 function getCurrentTemperature(latitude, longitude) {
-
-    // Fetch weather data from the API
     fetch(`${serverUrl}/api/weather?lat=${latitude}&lon=${longitude}`)
-        .then(response => response.json()) // Parse the JSON data from the response
+        .then(response => response.json())
         .then(data => {
             if (data.main) {
-                // Display temperature (in Celsius) and description in the HTML
-                console.log('weather data: ', data); // Log data for debugging
-                temperature.innerHTML = `Temperature: ${((data.main.temp) - 273.15).toFixed(2)}°C`; // Convert from Kelvin to Celsius
-                description.innerHTML = `Description: ${data.weather[0].description}`; // Display weather description
-
+                temperature.innerHTML = `Temperature: ${((data.main.temp) - 273.15).toFixed(2)}°C`;
+                description.innerHTML = `Description: ${data.weather[0].description}`;
             } else {
-                temperature.innerHTML = "Unable to retrieve the temperature data"
+                temperature.innerHTML = "Unable to retrieve the temperature data";
                 description.innerHTML = "";
             }
         })
         .catch(error => {
-            // Handle any errors in the fetch request
             console.log('Error fetching the weather data: ', error);
             temperature.innerHTML = "Error fetching temperature";
         });
@@ -68,9 +91,13 @@ function getCurrentTemperature(latitude, longitude) {
 
 // Function to add a new comment
 function addComment() {
-    const commentValue = comment.value; // Get the comment from the input field
-    saveCommentsToLocalStorage(commentValue); // Save the comment to local storage
-    ShowComment(); // Display the updated list of comments
+    const commentValue = comment.value;
+    
+
+
+
+    saveCommentsToLocalStorage(commentValue);
+    displayComment(); // Display the updated list of comments
 
     comment.value = ''; // Clear the input field after submission
 }
@@ -79,48 +106,69 @@ function addComment() {
 function getDataFromLS() {
     let comments = [];
 
-    // If no comments are found in local storage, return an empty array
     if (localStorage.getItem('comments') === null) {
         comments = [];
     } else {
-        // Otherwise, parse the comments from local storage
         comments = JSON.parse(localStorage.getItem('comments'));
     }
 
-    return comments; // Return the array of comments
+    return comments;
 }
 
 // Function to save comments to local storage
 function saveCommentsToLocalStorage(theComment) {
-    let comments = getDataFromLS(); // Get the current list of comments
+    let comments = getDataFromLS();
 
-    // Only save the comment if it's not empty
     if (theComment.trim() !== '') {
-        // Add the comment along with the current date
         comments.push({ text: theComment, date: new Date() });
-        localStorage.setItem('comments', JSON.stringify(comments)); // Save the updated list back to local storage
+        localStorage.setItem('comments', JSON.stringify(comments));
     } else {
-        // Alert the user if they try to submit an empty comment
         alert('Please enter your comment before submitting');
     }
 }
 
 // Function to display comments in the comments list element
-function ShowComment() {
-    const comments = getDataFromLS(); // Get the list of comments from local storage
-    commentsList.innerHTML = ''; // Clear the current list
+function displayComment() {
+    const token = localStorage.getItem("authToken");
 
-    // Loop through each comment and create an <li> element for it
-    comments.forEach(comment => {
-        const li = document.createElement('li');
-        li.textContent = `${comment.date}: ${comment.text}`; // Display the date and comment text
-        li.classList.add('li'); // Add a CSS class for styling
-        commentsList.appendChild(li); // Add the <li> to the comments list
+    fetch(`${serverUrl}/api/comments`, {
+        method: "GET",
+        headers: {
+            "Authorization": `Bearer ${token}`,
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error("Failed to fetch comments");
+        }
+        return response.json();
+    })
+    .then(data => {
+        commentsList.innerHTML = '';
+
+        data.comments.forEach(comment => {
+            const li = document.createElement('li');
+            li.textContent = `${new Date(comment.date).toLocaleString()}: ${comment.comment}`;
+            li.classList.add('li');
+            commentsList.appendChild(li);
+        });
+    })
+    .catch(error => {
+        console.log("Error fetching comments:", error);
+        document.getElementById("login-message").textContent = "Error fetching comments!";
     });
 }
 
 // Function to load comments when the page is loaded
 function loadDOM() {
-    ShowComment(); // Display the comments from local storage
-}
+    const token = localStorage.getItem("authToken");
 
+    if (token) {
+        document.getElementById("login-section").style.display = "none";
+        document.getElementById("comment-section").style.display = "block";
+        displayComment(); // Display comments from API
+    } else {
+        document.getElementById("login-section").style.display = "block";
+        document.getElementById("comment-section").style.display = "none";
+    }
+}

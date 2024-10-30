@@ -3,7 +3,7 @@
 
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="viewport" content="width= device-width, initial-scale=1.0">
         <title>weatherApp</title>
         <link rel="stylesheet" href="style.css">
     </head>
@@ -24,17 +24,24 @@
             </div>
         </div>
 
-        <div id="comment-section">
+        <!-- Login section -->
+        <div id="login-section">
+            <h2>Login</h2>
+            <input type="text" id="username" placeholder="Enter your username"><br>
+            <input type="password" id="password" placeholder="Enter your password"><br>
+            <button onclick="login()">Login</button>
+            <p id="login-message"></p>
+        </div>
+
+        <!-- Comment section (hidden until logged in) -->
+        <div id="comment-section" style="display: none;">
             <h2>Comment below and tell us how does it makes you feel</h2>
 
             <textarea id="comment" placeholder="write your comment"> </textarea></br>
-            <button onclick="addComment()"> Submit your comment </button>
+            <button onclick="addComment()">Submit your comment</button>
         
             <ul id="comments-list"></ul>
         </div>
-
-
-
 
         <script src="script.js"></script>
     </body>

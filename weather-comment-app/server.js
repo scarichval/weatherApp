@@ -75,7 +75,7 @@ const Comment = mongoose.model('Comment', commentSchema);
 
 // route to handle weather data requests from the frontend
 app.get('/api/weather', async (req, res) => {
-    const { lat, lon } = req.query;
+    const { lat, lon } = req.query;  
     
     if(!lat || !lon){
         return res.status(400).json({ message: "Latitude and longitude are required" });
@@ -166,17 +166,16 @@ app.delete('/api/comments/:id', async(req, res) => {
 });
 
 
-// Basic route - Home page
-app.get('/', async (req, res) => {
-    res.send('Hello world !'); // Send a response when someone visits the root URL
-});
+// // Basic route - Home page
+// app.get('/', async (req, res) => {
+//     res.send('Hello world !'); // Send a response when someone visits the root URL
+// });
 
+// // route to test the authenticateJWT
+// app.get('/api/protected', authenticateJWT, (req, res) => {
+//     res.json('it worked');
 
-// route to test the authenticateJWT
-app.get('/api/protected', authenticateJWT, (req, res) => {
-    res.json('it worked');
-
-});
+// });
 
 // Login route 
 app.post('/api/login', async (req, res) => {
@@ -204,7 +203,7 @@ app.post('/api/login', async (req, res) => {
 
         // generer un token pour l'utilisateur
         const token = jwt.sign({ username: user.username }, JWT_SECRET, { expiresIn: '1h' });
-        res.json({ token })
+        res.json({ token });
 
     } catch (error) {
         // console.log(error);
