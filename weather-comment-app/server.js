@@ -133,7 +133,7 @@ app.get('/api/comments', async (req, res) => {
 
 });
 
-// route to update the comment
+// route to update the    
 app.put('/api/comments/:id', async (req, res) => {
     const commentId = req.params.id;
     const { comment } = req.body;

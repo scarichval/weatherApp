@@ -92,13 +92,32 @@ function getCurrentTemperature(latitude, longitude) {
 // Function to add a new comment
 function addComment() {
     const commentValue = comment.value;
+    const username = document.getElementById("username").value;
+    const token = localStorage.getItem("authToken");
     
+    console.log(username);
 
-
-
-    saveCommentsToLocalStorage(commentValue);
-    displayComment(); // Display the updated list of comments
-
+    fetch(`${serverUrl}/api/comments`, {
+        method: "POST",
+        headers: {
+            "Content-type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({username: username, comment: commentValue})
+    })
+    .then(response => {
+        if(response.ok){
+            console.log("Comment added successfully");
+            renderComment(username, commentValue);
+        }else{
+            console.log("Error adding the comment");
+        }
+    })
+    .catch(error => {
+        console.log("Error: ", error);
+        //Display a message when successfully added else an error
+    })
+        
     comment.value = ''; // Clear the input field after submission
 }
 
@@ -127,6 +146,15 @@ function saveCommentsToLocalStorage(theComment) {
     }
 }
 
+// Function to render a single comment with the username
+function renderComment(username, commentText, date = new Date()) {
+    const li = document.createElement('li');
+    li.textContent = `${username} (${date.toLocaleString()}): ${commentText}`; // Displaying username
+    li.classList.add('li');
+    commentsList.appendChild(li); // Append the new comment to the list
+}
+
+
 // Function to display comments in the comments list element
 function displayComment() {
     const token = localStorage.getItem("authToken");
@@ -147,10 +175,7 @@ function displayComment() {
         commentsList.innerHTML = '';
 
         data.comments.forEach(comment => {
-            const li = document.createElement('li');
-            li.textContent = `${new Date(comment.date).toLocaleString()}: ${comment.comment}`;
-            li.classList.add('li');
-            commentsList.appendChild(li);
+            renderComment(comment.username, comment.comment, new Date(comment.date));
         });
     })
     .catch(error => {
